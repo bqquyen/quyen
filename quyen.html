@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kiem tra mat khau</title>
+</head>
+<body>
+<h2>Kiem tra mat khau</h2>
+<script>
+function ktra(mk){
+    let re = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    return re.test(mk);
+}
+
+function domanh(mk){
+    if (mk.length === 8){
+        return "yeu vo cung";
+    } else if (mk.length < 12){
+        return "trung binh";
+    } else {
+        return "rat manh";
+    }
+}
+
+function nhapmk(){
+    let mk = prompt("Nhap mat khau it nhat 8 ky tu");
+
+    while (!ktra(mk)){
+        alert("Mat khau khong hop le vui long nhap lai");
+        mk = prompt("Nhap lai mat khau");
+    }
+
+    let dm = domanh(mk);
+    alert("Mat khau hop le do manh: " + dm);
+}
+
+nhapmk();
+</script>
+
+</body>
+</html>
