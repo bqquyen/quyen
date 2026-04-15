@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách sinh viên</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { margin-top: 10px; padding: 8px 12px; }
+        #ghichu { color: red; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Upload file danh sách lớp (.xlsx)</h2>
+    <input type="file" id="tepexcel" accept=".xlsx" />
+    <button id="nutthemtt" disabled>Tự thêm thông tin</button>
+    <button id="nuttaifile" disabled>Tải file về</button>
+    <p id="ghichu">Vui lòng upload file trước khi thêm thông tin.</p>
+
+    <table id="bangsv">
+        <thead>
+        <tr>
+            <th>STT</th>
+            <th>Họ và tên</th>
+            <th>Mã SV</th>
+            <th>Khóa học</th>
+            <th>Khoa</th>
+            <th>Email</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+<script>
+let dssvraw = []
+let dssv = []
+
+// ham bo dau tieng viet
+function bodautv(chuoi){
+  return chuoi.normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/đ/g, "d")
+              .replace(/Đ/g, "D")
+}
+
+// lop sv
+class sv {
+  constructor(stt, masv, hoten){
+    this.stt = stt
+    this.masv = masv
+    this.hoten = hoten
+    this.khoahoc = ""
+    this.khoa = ""
+    this.email = ""
+  }
+
+  laykhoahoc(){
+    return "Khóa " + this.masv.substring(0,2)
+  }
+
+  laykhoa(){
+    const ma = this.masv.substring(2,5)
+    if (ma === "404") return "CNTT và Kinh tế số"
+    return "Khác"
+  }
+
+  taoemail(){
+    const phan = this.hoten.trim().split(" ")
+    const tenchinh = bodautv(phan[phan.length - 1]).toLowerCase()
+    const chucaidau = phan.slice(0, phan.length - 1)
+                          .map(w => bodautv(w[0]).toLowerCase())
+                          .join("")
+    return `${tenchinh}${chucaidau}.${this.masv.toLowerCase()}@hvnh.edu.vn`
+  }
+
+  themtt() {
+    this.khoahoc = this.laykhoahoc()
+    this.khoa = this.laykhoa()
+    this.email = this.taoemail()
+  }
+}
+
+// doc file excel
+async function docexcel(tep){
+  const dulieu = await tep.arrayBuffer()
+  const wb = XLSX.read(dulieu, { type: "array" })
+  const tensheet = wb.SheetNames[0]
+  const sheet = wb.Sheets[tensheet]
+  return XLSX.utils.sheet_to_json(sheet)
+}
+
+// su kien upload file
+document.getElementById("tepexcel").addEventListener("change", async (event) => {
+  const tep = event.target.files[0]
+  if (!tep) return
+
+  const dong = await docexcel(tep)
+  console.log("Dữ liệu đọc được:", dong)
+
+  dssvraw = dong.map(row => new sv(
+    row["STT"], 
+    row["Mã SV"], 
+    row["Họ tên"]
+  ))
+  vebang(dssvraw)
+
+  document.getElementById("nutthemtt").disabled = false
+  document.getElementById("ghichu").style.display = "none"
+})
+
+// su kien them thong tin
+document.getElementById("nutthemtt").addEventListener("click", () => {
+  dssv = dssvraw.map(sv1 => {
+    sv1.themtt()
+    return sv1
+  })
+  vebang(dssv)
+  document.getElementById("nuttaifile").disabled = false
+})
+
+// su kien tai file ve
+document.getElementById("nuttaifile").addEventListener("click", () => {
+  const dulieu = dssv.map(sv1 => ({
+    STT: sv1.stt,
+    "Họ tên": sv1.hoten,
+    "Mã SV": sv1.masv,
+    "Khóa học": sv1.khoahoc,
+    "Khoa": sv1.khoa,
+    "Email": sv1.email
+  }))
+
+  const ws = XLSX.utils.json_to_sheet(dulieu)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, "Danh sách")
+  XLSX.writeFile(wb, "Danh_sach_sinh_vien.xlsx")
+})
+
+// ve bang html
+function vebang(ds) {
+  const tbody = document.querySelector("#bangsv tbody")
+  tbody.innerHTML = ""
+  ds.forEach(sv1 => {
+    const dong = `<tr>
+      <td>${sv1.stt || ""}</td>
+      <td>${sv1.hoten || ""}</td>
+      <td>${sv1.masv || ""}</td>
+      <td>${sv1.khoahoc || ""}</td>
+      <td>${sv1.khoa || ""}</td>
+      <td>${sv1.email || ""}</td>
+    </tr>`
+    tbody.innerHTML += dong
+  })
+}
+</script>
+</body>
+</html>
